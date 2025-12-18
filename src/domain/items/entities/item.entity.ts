@@ -85,6 +85,64 @@ export class Item {
     );
   }
 
+  /**
+   * Create Item from database without strict validation
+   * Allows reading existing data even if dates are out of order
+   */
+  static fromDatabase(props: {
+    id?: number;
+    itemNumber: string;
+    specNumber: string;
+    itemName: string;
+    vendor: string;
+    shipTo: string;
+    shipToAddress?: string;
+    shipFrom?: string;
+    qty: number;
+    phase: string;
+    price: number;
+    shipNotes?: string;
+    notes?: string;
+    location?: string;
+    category?: string;
+    uploadFile?: string;
+    trackingDates?: {
+      poApprovalDate?: Date;
+      hotelNeedByDate?: Date;
+      expectedDelivery?: Date;
+      cfaShopsSend?: Date;
+      cfaShopsApproved?: Date;
+      cfaShopsDelivered?: Date;
+      orderedDate?: Date;
+      shippedDate?: Date;
+      deliveredDate?: Date;
+    };
+    createdAt?: Date;
+    updatedAt?: Date;
+  }): Item {
+    return new Item(
+      props.id ?? null,
+      ItemNumber.create(props.itemNumber),
+      props.specNumber,
+      props.itemName,
+      props.vendor,
+      ShippingAddress.create(props.shipTo, props.shipToAddress, props.shipFrom),
+      Quantity.create(props.qty),
+      props.phase,
+      Price.create(props.price),
+      props.trackingDates
+        ? TrackingDates.fromDatabase(props.trackingDates)
+        : TrackingDates.fromDatabase({}),
+      props.shipNotes,
+      props.notes,
+      props.location,
+      props.category,
+      props.uploadFile,
+      props.createdAt,
+      props.updatedAt,
+    );
+  }
+
   private validate(): void {
     if (!this.specNumber || this.specNumber.trim().length === 0) {
       throw new Error('Specification number is required');

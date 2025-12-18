@@ -15,9 +15,49 @@ const randomDate = (start: Date, end: Date): Date => {
   );
 };
 
+// Helper function to get random date after a given date
+const randomDateAfter = (after: Date, end: Date): Date => {
+  return randomDate(after, end);
+};
+
 // Helper function to get random number in range
 const randomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+// Helper function to generate valid shipping dates in order
+const generateShippingDates = (
+  baseDate: Date,
+  futureDate: Date,
+): {
+  orderedDate: Date | null;
+  shippedDate: Date | null;
+  deliveredDate: Date | null;
+} => {
+  const orderedDate =
+    Math.random() > 0.4
+      ? randomDate(new Date(2024, 0, 1), baseDate)
+      : null;
+
+  // If orderedDate exists, shippedDate must be after it
+  const shippedDate =
+    Math.random() > 0.5
+      ? orderedDate
+        ? randomDateAfter(orderedDate, baseDate)
+        : randomDate(new Date(2024, 0, 1), baseDate)
+      : null;
+
+  // If shippedDate exists, deliveredDate must be after it
+  const deliveredDate =
+    Math.random() > 0.6
+      ? shippedDate
+        ? randomDateAfter(shippedDate, baseDate)
+        : orderedDate
+          ? randomDateAfter(orderedDate, baseDate)
+          : randomDate(new Date(2024, 0, 1), baseDate)
+      : null;
+
+  return { orderedDate, shippedDate, deliveredDate };
 };
 
 async function bootstrap() {
@@ -186,40 +226,58 @@ async function bootstrap() {
           shipFrom: vendor,
           shipNotes: random(shipNotes),
         },
-        tracking: {
-          poApprovalDate:
+        tracking: (() => {
+          // Generate valid shipping dates in order
+          const shippingDates = generateShippingDates(baseDate, futureDate);
+
+          // Generate planning dates (can be in any order relative to each other)
+          const poApprovalDate =
             Math.random() > 0.3
               ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          hotelNeedByDate:
-            Math.random() > 0.3 ? randomDate(baseDate, futureDate) : null,
-          expectedDelivery:
-            Math.random() > 0.4 ? randomDate(baseDate, futureDate) : null,
-          cfaShopsSend:
+              : null;
+
+          const hotelNeedByDate =
+            Math.random() > 0.3 ? randomDate(baseDate, futureDate) : null;
+
+          const expectedDelivery =
+            Math.random() > 0.4 ? randomDate(baseDate, futureDate) : null;
+
+          // Generate production dates (can be in any order relative to each other)
+          const cfaShopsSend =
             Math.random() > 0.5
               ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          cfaShopsApproved:
+              : null;
+
+          // cfaShopsApproved should be after cfaShopsSend if both exist
+          const cfaShopsApproved =
             Math.random() > 0.5
-              ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          cfaShopsDelivered:
+              ? cfaShopsSend
+                ? randomDateAfter(cfaShopsSend, baseDate)
+                : randomDate(new Date(2024, 0, 1), baseDate)
+              : null;
+
+          // cfaShopsDelivered should be after cfaShopsApproved if both exist
+          const cfaShopsDelivered =
             Math.random() > 0.6
-              ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          orderedDate:
-            Math.random() > 0.4
-              ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          shippedDate:
-            Math.random() > 0.5
-              ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-          deliveredDate:
-            Math.random() > 0.6
-              ? randomDate(new Date(2024, 0, 1), baseDate)
-              : null,
-        },
+              ? cfaShopsApproved
+                ? randomDateAfter(cfaShopsApproved, baseDate)
+                : cfaShopsSend
+                  ? randomDateAfter(cfaShopsSend, baseDate)
+                  : randomDate(new Date(2024, 0, 1), baseDate)
+              : null;
+
+          return {
+            poApprovalDate,
+            hotelNeedByDate,
+            expectedDelivery,
+            cfaShopsSend,
+            cfaShopsApproved,
+            cfaShopsDelivered,
+            orderedDate: shippingDates.orderedDate,
+            shippedDate: shippingDates.shippedDate,
+            deliveredDate: shippingDates.deliveredDate,
+          };
+        })(),
         metadata: {
           notes: random(notes),
           location: random(locations),
@@ -265,3 +323,4 @@ async function bootstrap() {
 }
 
 void bootstrap();
+

@@ -284,6 +284,24 @@ export class SequelizeItemRepository implements IItemRepository {
     if (updates.shippedDate !== undefined) trackingUpdates.shippedDate = updates.shippedDate;
     if (updates.deliveredDate !== undefined) trackingUpdates.deliveredDate = updates.deliveredDate;
 
+    // Validate tracking date relationships if multiple related dates are being updated
+    // Only validate the new dates being set, not against existing dates
+    if (Object.keys(trackingUpdates).length > 0) {
+      // Validate that shipped date is after ordered date (if both are being set)
+      if (trackingUpdates.orderedDate && trackingUpdates.shippedDate) {
+        if (trackingUpdates.shippedDate < trackingUpdates.orderedDate) {
+          throw new Error('Shipped date cannot be before ordered date');
+        }
+      }
+
+      // Validate that delivered date is after shipped date (if both are being set)
+      if (trackingUpdates.shippedDate && trackingUpdates.deliveredDate) {
+        if (trackingUpdates.deliveredDate < trackingUpdates.shippedDate) {
+          throw new Error('Delivered date cannot be before shipped date');
+        }
+      }
+    }
+
     if (updates.notes !== undefined) metadataUpdates.notes = updates.notes;
     if (updates.location !== undefined) metadataUpdates.location = updates.location;
     if (updates.category !== undefined) metadataUpdates.category = updates.category;

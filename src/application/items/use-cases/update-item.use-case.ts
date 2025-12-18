@@ -98,7 +98,9 @@ export class UpdateItemUseCase {
     }
 
     // Create updated item entity
-    const updatedItem = Item.create({
+    // Use fromDatabase to preserve existing tracking dates (even if invalid)
+    // Validation will occur when tracking dates are actually updated via updateTrackingDates
+    const updatedItem = Item.fromDatabase({
       id: item.getId()!,
       itemNumber: item.getItemNumber().getValue(),
       specNumber: dto.specNumber ?? item.getSpecNumber(),

@@ -12,10 +12,16 @@ export class TrackingDates {
     private readonly orderedDate?: Date,
     private readonly shippedDate?: Date,
     private readonly deliveredDate?: Date,
+    private readonly skipValidation: boolean = false,
   ) {
-    this.validateDates();
+    if (!this.skipValidation) {
+      this.validateDates();
+    }
   }
 
+  /**
+   * Create TrackingDates with validation (for business operations)
+   */
   static create(dates: {
     poApprovalDate?: Date;
     hotelNeedByDate?: Date;
@@ -37,6 +43,36 @@ export class TrackingDates {
       dates.orderedDate,
       dates.shippedDate,
       dates.deliveredDate,
+      false, // Validate
+    );
+  }
+
+  /**
+   * Create TrackingDates without validation (for reading from database)
+   * Allows reading existing data even if dates are out of order
+   */
+  static fromDatabase(dates: {
+    poApprovalDate?: Date;
+    hotelNeedByDate?: Date;
+    expectedDelivery?: Date;
+    cfaShopsSend?: Date;
+    cfaShopsApproved?: Date;
+    cfaShopsDelivered?: Date;
+    orderedDate?: Date;
+    shippedDate?: Date;
+    deliveredDate?: Date;
+  }): TrackingDates {
+    return new TrackingDates(
+      dates.poApprovalDate,
+      dates.hotelNeedByDate,
+      dates.expectedDelivery,
+      dates.cfaShopsSend,
+      dates.cfaShopsApproved,
+      dates.cfaShopsDelivered,
+      dates.orderedDate,
+      dates.shippedDate,
+      dates.deliveredDate,
+      true, // Skip validation
     );
   }
 
@@ -103,7 +139,7 @@ export class TrackingDates {
     shippedDate?: Date;
     deliveredDate?: Date;
   }): TrackingDates {
-    return TrackingDates.create({
+    const mergedDates = {
       poApprovalDate: updates.poApprovalDate ?? this.poApprovalDate,
       hotelNeedByDate: updates.hotelNeedByDate ?? this.hotelNeedByDate,
       expectedDelivery: updates.expectedDelivery ?? this.expectedDelivery,
@@ -113,7 +149,11 @@ export class TrackingDates {
       orderedDate: updates.orderedDate ?? this.orderedDate,
       shippedDate: updates.shippedDate ?? this.shippedDate,
       deliveredDate: updates.deliveredDate ?? this.deliveredDate,
-    });
+    };
+
+    // Always validate when updating (even if original was from database)
+    // This ensures updates maintain data integrity
+    return TrackingDates.create(mergedDates);
   }
 }
 

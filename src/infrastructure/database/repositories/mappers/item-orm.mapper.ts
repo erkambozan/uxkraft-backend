@@ -14,9 +14,9 @@ export class ItemMapper {
     trackingOrm?: ItemTrackingOrmEntity,
     metadataOrm?: ItemMetadataOrmEntity,
   ): Item {
-    // Note: Validation is done in the repository layer to avoid throwing errors
-    // during mapping. Invalid items are filtered out before mapping.
-    return Item.create({
+    // Use fromDatabase to allow reading existing data even if dates are out of order
+    // This prevents validation errors when reading from database
+    return Item.fromDatabase({
       id: itemOrm.id,
       itemNumber: itemOrm.itemNumber,
       specNumber: itemOrm.specNumber || '',

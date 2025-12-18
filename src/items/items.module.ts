@@ -45,3 +45,4 @@ import { BulkDeleteItemsUseCase } from '../application/items/use-cases/bulk-dele
   exports: ['IItemRepository'],
 })
 export class ItemsModule {}
+
