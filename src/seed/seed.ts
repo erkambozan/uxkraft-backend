@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
-import { Item } from '../models/item.model';
+import { ItemOrmEntity } from '../infrastructure/database/sequelize/models/item.orm-entity';
+import { ItemShippingOrmEntity } from '../infrastructure/database/sequelize/models/item-shipping.orm-entity';
+import { ItemTrackingOrmEntity } from '../infrastructure/database/sequelize/models/item-tracking.orm-entity';
+import { ItemMetadataOrmEntity } from '../infrastructure/database/sequelize/models/item-metadata.orm-entity';
 
 // Helper function to get random element from array
 const random = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
@@ -155,75 +158,104 @@ async function bootstrap() {
     'Installation date confirmed',
   ];
 
-  // Create diverse sample items
-  const items = Array.from({ length: 50 }, (_, i) => {
-    const baseDate = new Date();
-    const futureDate = new Date();
-    futureDate.setMonth(futureDate.getMonth() + 6);
-
-    const itemName = random(itemNames);
-    const vendor = random(vendors);
-    const hotel = random(hotels);
-    const address = random(addresses);
-
-    return {
-      itemNumber: `ITEM-${String(i + 1).padStart(4, '0')}`,
-      specNumber: random(specNumbers),
-      itemName: itemName,
-      vendor: vendor,
-      shipTo: hotel,
-      shipToAddress: `${hotel}, ${address}`,
-      shipFrom: vendor,
-      qty: randomInt(1, 20),
-      phase: random(phases),
-      price: parseFloat((Math.random() * 10000 + 500).toFixed(2)),
-      shipNotes: random(shipNotes),
-      notes: random(notes),
-      location: random(locations),
-      category: random(categories),
-      uploadFile: `${random(specNumbers)} ${random(locations).toUpperCase()}...`,
-      // Planning & Requirements dates (some items have dates, some don't)
-      poApprovalDate:
-        Math.random() > 0.3 ? randomDate(new Date(2024, 0, 1), baseDate) : null,
-      hotelNeedByDate:
-        Math.random() > 0.3
-          ? randomDate(baseDate, futureDate)
-          : null,
-      expectedDelivery:
-        Math.random() > 0.4
-          ? randomDate(baseDate, futureDate)
-          : null,
-      // Production & Shop dates
-      cfaShopsSend:
-        Math.random() > 0.5
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-      cfaShopsApproved:
-        Math.random() > 0.5
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-      cfaShopsDelivered:
-        Math.random() > 0.6
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-      // Shipping dates
-      orderedDate:
-        Math.random() > 0.4
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-      shippedDate:
-        Math.random() > 0.5
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-      deliveredDate:
-        Math.random() > 0.6
-          ? randomDate(new Date(2024, 0, 1), baseDate)
-          : null,
-    };
-  });
-
   try {
-    await Item.bulkCreate(items as any, { ignoreDuplicates: true });
+    // Create diverse sample items
+    const items = Array.from({ length: 50 }, (_, i) => {
+      const baseDate = new Date();
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + 6);
+
+      const itemName = random(itemNames);
+      const vendor = random(vendors);
+      const hotel = random(hotels);
+      const address = random(addresses);
+
+      return {
+        item: {
+          itemNumber: `ITEM-${String(i + 1).padStart(4, '0')}`,
+          specNumber: random(specNumbers),
+          itemName: itemName,
+          vendor: vendor,
+          qty: randomInt(1, 20),
+          phase: random(phases),
+          price: parseFloat((Math.random() * 10000 + 500).toFixed(2)),
+        },
+        shipping: {
+          shipTo: hotel,
+          shipToAddress: `${hotel}, ${address}`,
+          shipFrom: vendor,
+          shipNotes: random(shipNotes),
+        },
+        tracking: {
+          poApprovalDate:
+            Math.random() > 0.3
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          hotelNeedByDate:
+            Math.random() > 0.3 ? randomDate(baseDate, futureDate) : null,
+          expectedDelivery:
+            Math.random() > 0.4 ? randomDate(baseDate, futureDate) : null,
+          cfaShopsSend:
+            Math.random() > 0.5
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          cfaShopsApproved:
+            Math.random() > 0.5
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          cfaShopsDelivered:
+            Math.random() > 0.6
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          orderedDate:
+            Math.random() > 0.4
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          shippedDate:
+            Math.random() > 0.5
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+          deliveredDate:
+            Math.random() > 0.6
+              ? randomDate(new Date(2024, 0, 1), baseDate)
+              : null,
+        },
+        metadata: {
+          notes: random(notes),
+          location: random(locations),
+          category: random(categories),
+          uploadFile: `${random(specNumbers)} ${random(locations).toUpperCase()}...`,
+        },
+      };
+    });
+
+    // Insert items with related data
+    for (const itemData of items) {
+      try {
+        const [createdItem] = await ItemOrmEntity.findOrCreate({
+          where: { itemNumber: itemData.item.itemNumber },
+          defaults: itemData.item as any,
+        });
+
+        await ItemShippingOrmEntity.findOrCreate({
+          where: { itemId: createdItem.id },
+          defaults: { ...itemData.shipping, itemId: createdItem.id } as any,
+        });
+
+        await ItemTrackingOrmEntity.findOrCreate({
+          where: { itemId: createdItem.id },
+          defaults: { ...itemData.tracking, itemId: createdItem.id } as any,
+        });
+
+        await ItemMetadataOrmEntity.findOrCreate({
+          where: { itemId: createdItem.id },
+          defaults: { ...itemData.metadata, itemId: createdItem.id } as any,
+        });
+      } catch (error) {
+        console.error(`Error creating item ${itemData.item.itemNumber}:`, error);
+      }
+    }
+
     console.log(`✅ Seed data created successfully! ${items.length} items added.`);
   } catch (error) {
     console.error('❌ Error seeding data:', error);

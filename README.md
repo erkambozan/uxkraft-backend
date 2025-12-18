@@ -1,37 +1,74 @@
 # UXKraft Backend API
 
-> Backend API for UXKraft Items Management System built with NestJS, Sequelize, and PostgreSQL.
+> Backend API for UXKraft Items Management System built with NestJS, Sequelize, and PostgreSQL.  
+> **Architecture**: Domain-Driven Design (DDD) with Clean Code principles.
 
 [![NestJS](https://img.shields.io/badge/NestJS-11.0.1-E0234E?logo=nestjs)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-12+-336791?logo=postgresql)](https://www.postgresql.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org/)
+[![DDD](https://img.shields.io/badge/Architecture-DDD-blue)](https://martinfowler.com/bliki/DomainDrivenDesign.html)
 
 ## 📋 Table of Contents
 
 - [Features](#-features)
+- [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Running the Application](#-running-the-application)
-- [Database Seeding](#-database-seeding)
+- [Database Setup](#-database-setup)
 - [API Endpoints](#-api-endpoints)
 - [API Documentation](#-api-documentation)
 - [Project Structure](#-project-structure)
 - [Scripts](#-scripts)
+- [Database Schema](#-database-schema)
 - [Testing](#-testing)
 
 ## ✨ Features
 
+- **Domain-Driven Design (DDD)** architecture with clean separation of concerns
+- **Clean Code** principles with SOLID design patterns
 - RESTful API for items management
+- **Normalized database schema** with proper relationships
 - Pagination and filtering support
 - Bulk operations (edit, delete, tracking update)
 - Swagger API documentation
 - TypeScript for type safety
-- Database migrations with Sequelize
+- Value Objects and Domain Entities for business logic
+- Repository pattern for data access abstraction
 - Input validation with class-validator
 - CORS enabled for frontend integration
+- Transactional data operations
+
+## 🏗️ Architecture
+
+This project follows **Domain-Driven Design (DDD)** principles with a layered architecture:
+
+### Layer Structure
+
+```
+┌─────────────────────────────────────┐
+│   Presentation Layer (API)          │  ← Controllers, DTOs
+├─────────────────────────────────────┤
+│   Application Layer (Use Cases)     │  ← Business use cases, Application DTOs
+├─────────────────────────────────────┤
+│   Domain Layer (Business Logic)     │  ← Entities, Value Objects, Interfaces
+├─────────────────────────────────────┤
+│   Infrastructure Layer (Persistence)│  ← Repositories, ORM Entities
+└─────────────────────────────────────┘
+```
+
+### Key Principles
+
+- **Domain Layer**: Contains business logic, entities, and value objects
+- **Application Layer**: Orchestrates use cases and coordinates domain operations
+- **Infrastructure Layer**: Implements persistence and external services
+- **Presentation Layer**: Handles HTTP requests and responses
+- **Dependency Inversion**: Domain layer doesn't depend on infrastructure
+- **Single Responsibility**: Each class has one reason to change
+- **Repository Pattern**: Abstracts data access from business logic
 
 ## 🛠 Tech Stack
 
@@ -39,6 +76,7 @@
 - **Language**: TypeScript 5.7.3
 - **ORM**: Sequelize 6.37.7 with sequelize-typescript
 - **Database**: PostgreSQL 12+
+- **Architecture**: Domain-Driven Design (DDD)
 - **Documentation**: Swagger/OpenAPI
 - **Validation**: class-validator, class-transformer
 - **Testing**: Jest
@@ -123,12 +161,34 @@ The API will be available at:
 - **API**: `http://localhost:3000`
 - **Swagger Documentation**: `http://localhost:3000/api`
 
-## 🌱 Database Seeding
+## 🗄️ Database Setup
+
+### Initial Setup
+
+The database uses **normalized schema** with 4 related tables. On first run, Sequelize will automatically create the tables if `synchronize: true` is enabled in development mode.
+
+### Clean Database
+
+If you need to clean the database (removes all data):
+
+```bash
+npm run clean:db
+```
+
+**⚠️ Warning**: This will delete all data from all tables!
+
+### Seed Database
 
 Populate the database with sample data:
 
 ```bash
 npm run seed
+```
+
+Or clean and seed in one go:
+
+```bash
+npm run clean:db && npm run seed
 ```
 
 This will create 50 diverse items with varied data including:
@@ -184,22 +244,68 @@ The Swagger UI provides:
 ```
 uxkraft-backend/
 ├── src/
-│   ├── config/          # Configuration files
-│   │   └── database.config.ts
-│   ├── items/           # Items module
-│   │   ├── dto/         # Data Transfer Objects
-│   │   ├── items.controller.ts
-│   │   ├── items.service.ts
+│   ├── domain/                    # Domain Layer (Business Logic)
+│   │   └── items/
+│   │       ├── entities/          # Domain entities with business rules
+│   │       │   └── item.entity.ts
+│   │       ├── value-objects/     # Immutable value objects
+│   │       │   ├── item-number.vo.ts
+│   │       │   ├── price.vo.ts
+│   │       │   ├── quantity.vo.ts
+│   │       │   ├── shipping-address.vo.ts
+│   │       │   └── tracking-dates.vo.ts
+│   │       └── repositories/      # Repository interfaces
+│   │           └── item.repository.interface.ts
+│   │
+│   ├── application/               # Application Layer (Use Cases)
+│   │   └── items/
+│   │       ├── use-cases/         # Business use cases
+│   │       │   ├── create-item.use-case.ts
+│   │       │   ├── get-items.use-case.ts
+│   │       │   ├── get-item-by-id.use-case.ts
+│   │       │   ├── update-item.use-case.ts
+│   │       │   ├── delete-item.use-case.ts
+│   │       │   ├── bulk-edit-items.use-case.ts
+│   │       │   ├── update-tracking.use-case.ts
+│   │       │   └── bulk-delete-items.use-case.ts
+│   │       ├── dtos/              # Application DTOs
+│   │       │   ├── create-item-request.dto.ts
+│   │       │   ├── item-response.dto.ts
+│   │       │   └── paginated-items-response.dto.ts
+│   │       └── mappers/           # Entity-DTO mappers
+│   │           └── item.mapper.ts
+│   │
+│   ├── infrastructure/            # Infrastructure Layer
+│   │   └── database/
+│   │       ├── repositories/     # Repository implementations
+│   │       │   ├── sequelize-item.repository.ts
+│   │       │   └── mappers/
+│   │       │       └── item-orm.mapper.ts
+│   │       └── sequelize/
+│   │           └── models/       # ORM entities
+│   │               ├── item.orm-entity.ts
+│   │               ├── item-shipping.orm-entity.ts
+│   │               ├── item-tracking.orm-entity.ts
+│   │               └── item-metadata.orm-entity.ts
+│   │
+│   ├── presentation/              # Presentation Layer (API)
+│   │   └── items/
+│   │       └── items.controller.ts
+│   │
+│   ├── items/                     # Module configuration
 │   │   └── items.module.ts
-│   ├── models/          # Database models
-│   │   └── item.model.ts
-│   ├── seed/            # Database seeding
+│   │
+│   ├── config/                    # Configuration files
+│   │   └── database.config.ts
+│   ├── seed/                      # Database seeding
 │   │   └── seed.ts
-│   ├── app.module.ts    # Root module
+│   ├── scripts/                   # Utility scripts
+│   │   └── clean-database.ts
+│   ├── app.module.ts              # Root module
 │   ├── app.controller.ts
 │   ├── app.service.ts
-│   └── main.ts          # Application entry point
-├── test/                # E2E tests
+│   └── main.ts                    # Application entry point
+├── test/                          # E2E tests
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -221,6 +327,80 @@ uxkraft-backend/
 | `npm run test:cov` | Run tests with coverage |
 | `npm run test:e2e` | Run end-to-end tests |
 | `npm run seed` | Seed the database with sample data |
+| `npm run clean:db` | Clean all data from database |
+
+## 🗄️ Database Schema
+
+The database uses a **normalized schema** with 4 related tables:
+
+### 1. `items` (Parent Table)
+
+Core item information:
+
+- `id` - Primary key (auto-increment)
+- `itemNumber` - Unique item identifier
+- `specNumber` - Specification number
+- `itemName` - Item name
+- `vendor` - Vendor name
+- `qty` - Quantity
+- `phase` - Project phase
+- `price` - Item price
+- `createdAt` - Creation timestamp
+- `updatedAt` - Last update timestamp
+
+### 2. `item_shipping` (Child Table - One-to-One)
+
+Shipping information:
+
+- `itemId` - Foreign key (references `items.id`)
+- `shipTo` - Shipping destination
+- `shipToAddress` - Shipping address
+- `shipFrom` - Shipping origin
+- `shipNotes` - Shipping notes
+- `createdAt` - Creation timestamp
+- `updatedAt` - Last update timestamp
+
+### 3. `item_tracking` (Child Table - One-to-One)
+
+Tracking dates:
+
+- `itemId` - Foreign key (references `items.id`)
+- **Planning & Requirements:**
+  - `poApprovalDate` - PO approval date
+  - `hotelNeedByDate` - Hotel need-by date
+  - `expectedDelivery` - Expected delivery date
+- **Production & Shop:**
+  - `cfaShopsSend` - CFA shops send date
+  - `cfaShopsApproved` - CFA shops approval date
+  - `cfaShopsDelivered` - CFA shops delivery date
+- **Shipping:**
+  - `orderedDate` - Order date
+  - `shippedDate` - Ship date
+  - `deliveredDate` - Delivery date
+- `createdAt` - Creation timestamp
+- `updatedAt` - Last update timestamp
+
+### 4. `item_metadata` (Child Table - One-to-One)
+
+Additional metadata:
+
+- `itemId` - Foreign key (references `items.id`)
+- `notes` - General notes
+- `location` - Item location
+- `category` - Item category
+- `uploadFile` - Uploaded file reference
+- `createdAt` - Creation timestamp
+- `updatedAt` - Last update timestamp
+
+### Relationships
+
+```
+items (1) ──< (1) item_shipping
+items (1) ──< (1) item_tracking
+items (1) ──< (1) item_metadata
+```
+
+All relationships are **one-to-one** with `items` as the parent table.
 
 ## 🧪 Testing
 
@@ -248,48 +428,34 @@ npm run test:cov
 npm run test:e2e
 ```
 
-## 🗄️ Database Schema
+## 🏛️ Domain-Driven Design Concepts
 
-The `items` table includes the following fields:
+### Value Objects
 
-### Basic Information
-- `id` - Primary key (auto-increment)
-- `itemNumber` - Unique item identifier
-- `specNumber` - Specification number
-- `itemName` - Item name
-- `vendor` - Vendor name
-- `qty` - Quantity
-- `phase` - Project phase
-- `price` - Item price
-- `category` - Item category
-- `location` - Item location
+Immutable objects that represent domain concepts:
+- `ItemNumber` - Validates and encapsulates item number
+- `Price` - Ensures price is non-negative and properly formatted
+- `Quantity` - Validates quantity constraints
+- `ShippingAddress` - Encapsulates shipping information
+- `TrackingDates` - Manages and validates date relationships
 
-### Shipping Information
-- `shipTo` - Shipping destination
-- `shipToAddress` - Shipping address
-- `shipFrom` - Shipping origin
-- `shipNotes` - Shipping notes
+### Domain Entities
 
-### Planning & Requirements Dates
-- `poApprovalDate` - PO approval date
-- `hotelNeedByDate` - Hotel need-by date
-- `expectedDelivery` - Expected delivery date
+Rich domain models with business logic:
+- `Item` - Main aggregate root with business rules and invariants
 
-### Production & Shop Dates
-- `cfaShopsSend` - CFA shops send date
-- `cfaShopsApproved` - CFA shops approval date
-- `cfaShopsDelivered` - CFA shops delivery date
+### Use Cases
 
-### Shipping Dates
-- `orderedDate` - Order date
-- `shippedDate` - Ship date
-- `deliveredDate` - Delivery date
+Application layer orchestrates business operations:
+- Each use case handles a single business operation
+- Coordinates between domain entities and repositories
+- Returns application DTOs
 
-### Metadata
-- `notes` - General notes
-- `uploadFile` - Uploaded file reference
-- `createdAt` - Creation timestamp
-- `updatedAt` - Last update timestamp
+### Repository Pattern
+
+- **Interface** defined in domain layer (`IItemRepository`)
+- **Implementation** in infrastructure layer (`SequelizeItemRepository`)
+- Provides abstraction over data persistence
 
 ## 🤝 Contributing
 
@@ -309,4 +475,7 @@ UXKraft Development Team
 
 ---
 
-**Note**: Make sure PostgreSQL is running and the database is created before starting the application.
+**Note**: 
+- Make sure PostgreSQL is running and the database is created before starting the application.
+- If you encounter issues with old data, run `npm run clean:db` to clean the database.
+- The application uses DDD principles - changes to business logic should be made in the domain layer.
